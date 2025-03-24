@@ -4,10 +4,13 @@ import cors from "cors";
 import TelegramBot from 'node-telegram-bot-api';
 import fs from "fs";
 import path from "path"; // Thêm module path
-import moment from "moment"; // Thêm thư viện moment để xử lý thời gian
+import moment from "moment-timezone"; // Changed to moment-timezone
 import { fileURLToPath } from 'url'; // Thêm để chuyển đổi URL sang đường dẫn file
 import { dirname } from 'path'; // Thêm để lấy tên thư mục cha
 import axios from "axios";
+
+// Set default timezone to Asia/Ho_Chi_Minh (GMT+7)
+moment.tz.setDefault('Asia/Ho_Chi_Minh');
 
 const __filename = fileURLToPath(import.meta.url); // Lấy đường dẫn tệp hiện tại
 const __dirname = dirname(__filename); // Lấy thư mục chứa tệp hiện tại
@@ -37,11 +40,10 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, `${userFirstName}, Chào mừng bạn đến với bot Money Connection, giúp bạn ghi lại và theo dõi thu chi cá nhân!`);
 });
 
-const dateRecord = moment().format('DD/MM/YYYY HH:mm');
-
 // CREATE LOG RECORD
 const logToFile = (amount, description, status) => {
-    // Get time now
+    // Get time now in GMT+7
+    const dateRecord = moment().format('DD/MM/YYYY HH:mm');
     const logEntry = `\r\n${dateRecord} | ${amount} | ${description} | ${status}`;
     fs.appendFile(logFilePath, logEntry, (err) => {
         if (err) throw err;
@@ -90,6 +92,7 @@ bot.onText(/\/in (.+)/, (msg, match) => {
 
     if (amount && description) {
         try {
+            const dateRecord = moment().format('DD/MM/YYYY HH:mm');
             logToFile(amount, description, 'in');
             bot.sendMessage(chatId, 
                 `<i>Đã ghi nhận giao dịch mới:</i>\n----------------------\nTrị giá: <code>${amount}</code>\nNội dung: <code>${description}</code>\n----------------------\nLoại giao dịch: <code>Thu về</code>\n`, 
@@ -126,6 +129,7 @@ bot.onText(/\/in (.+)/, (msg, match) => {
 bot.onText(/\/out (.+)/, (msg, match) => {
     const chatId = msg.chat.id;
     const commandContent = match[1];
+    const dateRecord = moment().format('DD/MM/YYYY HH:mm');
 
     let [amount, description] = commandContent.split(/[\|,]/).map(str => str.trim());
 
@@ -193,7 +197,7 @@ bot.onText(/\/now/, (msg) => {
             if (parts.length < 4) return;
 
             const [datePart, amount, description, status] = parts;
-            const logDate = moment(datePart, 'DD/MM HH:mm');
+            const logDate = moment(datePart, 'DD/MM/YYYY HH:mm');
 
             if (logDate.isAfter(startOfDay) && logDate.isBefore(moment())) {
                 let amountValue = parseFloat(amount.replace(/\./g, '').replace(/ đ/g, ''));
@@ -242,7 +246,7 @@ bot.onText(/\/day (\d{1,2})\/(\d{1,2})/, (msg, match) => {
             if (parts.length < 4) return;
 
             const [datePart, amount, description, status] = parts;
-            const logDate = moment(datePart, 'DD/MM HH:mm');
+            const logDate = moment(datePart, 'DD/MM/YYYY HH:mm');
 
             if (logDate.isSame(selectedDate, 'day')) {
                 let amountValue = parseFloat(amount.replace(/\./g, '').replace(/ đ/g, ''));
@@ -290,7 +294,7 @@ bot.onText(/\/clear (\d{1,2})\/(\d{1,2})/, (msg, match) => {
             if (parts.length < 4) return;
 
             const [datePart] = parts;
-            const logDate = moment(datePart, 'DD/MM HH:mm');
+            const logDate = moment(datePart, 'DD/MM/YYYY HH:mm');
 
             if (logDate.isBefore(startOfSpecifiedDate) || logDate.isAfter(endOfSpecifiedDate)) {
                 newLogEntries.push(line);
@@ -342,7 +346,7 @@ bot.onText(/\/month (\d{2})/, (msg, match) => {
             if (parts.length < 4) return;
 
             const [datePart, amount, description, status] = parts;
-            const logDate = moment(datePart, 'DD/MM HH:mm');
+            const logDate = moment(datePart, 'DD/MM/YYYY HH:mm');
 
             if (logDate.month() + 1 === month && logDate.isAfter(moment().subtract(6, 'months'))) {
                 let amountValue = parseFloat(amount.replace(/\./g, '').replace(/ đ/g, ''));
